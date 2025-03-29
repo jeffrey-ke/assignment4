@@ -18,7 +18,7 @@ def make_trainable(gaussians):
     gaussians.means.requires_grad_(True)
     gaussians.pre_act_scales.requires_grad_(True)
     gaussians.colours.requires_grad_(True)
-    guassians.pre_act_opacities.requires_grad_(True)
+    gaussians.pre_act_opacities.requires_grad_(True)
 
 def setup_optimizer(gaussians):
 

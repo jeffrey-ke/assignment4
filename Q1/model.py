@@ -69,8 +69,8 @@ class Gaussians:
         self.pre_act_opacities = data["pre_act_opacities"]
 
         # [Q 1.3.1] NOTE: Uncomment spherical harmonics code for question 1.3.1
-       # if data.get("spherical_harmonics") is not None:
-       #     self.spherical_harmonics = data["spherical_harmonics"]
+        if data.get("spherical_harmonics") is not None:
+            self.spherical_harmonics = data["spherical_harmonics"]
 
         if self.device == "cuda":
             self.to_cuda()
@@ -90,7 +90,7 @@ class Gaussians:
         data["colours"] = torch.tensor(ply_gaussians["dc_colours"])
 
         # [Q 1.3.1] NOTE: Uncomment spherical harmonics code for question 1.3.1
-        #data["spherical_harmonics"] = torch.tensor(ply_gaussians["sh"])
+        data["spherical_harmonics"] = torch.tensor(ply_gaussians["sh"])
 
         if data["pre_act_scales"].shape[1] != 3:
             raise NotImplementedError("Currently does not support isotropic")
@@ -213,7 +213,7 @@ class Gaussians:
         self.pre_act_opacities = self.pre_act_opacities.cuda()
 
         # [Q 1.3.1] NOTE: Uncomment spherical harmonics code for question 1.3.1
-        #self.spherical_harmonics = self.spherical_harmonics.cuda()
+        self.spherical_harmonics = self.spherical_harmonics.cuda()
 
     def compute_cov_3D(self, quats: torch.Tensor, scales: torch.Tensor):
         """
@@ -384,16 +384,27 @@ class Gaussians:
                                 power of the N 2D Gaussians at every pixel location in an image.
         """
         ### YOUR CODE HERE ###
-        # HINT: Refer to README for a relevant equation
+        # HINT: Refer to README for a relev/splat
+        # ant equation
         # for every gaussian, evaluate at the points
         #power = -0.5 * (points_2D - means_2D).transpose * cov_2D_inverse * (points_2D - means_2D)  # (N, H*W)
-        N = means_2D.shape[0]
+        # Suppose 'points_2D' and 'means_2D' are shape (N, HW, 2),
+        # and 'cov_2D_inverse' is shape (N, 2, 2).
+        # Then dx, dy can each be shape (N, HW).
 
-        a = points_2D - means_2D #N,HW,2
-        a = a.unsqueeze(-1)
-        cov_2D_inverse = cov_2D_inverse.unsqueeze(1)
-        power = -0.5 * a.permute((0,1,3,2)) @ cov_2D_inverse @ a
-        power = power.view(*power.shape[:-2])
+        dx = points_2D[..., 0] - means_2D[..., 0]   # (N, HW)
+        dy = points_2D[..., 1] - means_2D[..., 1]   # (N, HW)
+
+        inv00 = cov_2D_inverse[:, 0, 0].unsqueeze(-1)  # (N, 1)
+        inv01 = cov_2D_inverse[:, 0, 1].unsqueeze(-1)  # (N, 1)
+        inv11 = cov_2D_inverse[:, 1, 1].unsqueeze(-1)  # (N, 1)
+
+        # Apply the expanded exponent formula for each point
+        power = -0.5 * (
+            inv00 * dx**2 +
+            2 * inv01 * dx * dy +
+            inv11 * dy**2
+        )  # (N, HW)
         return power
 
     @staticmethod
@@ -632,6 +643,10 @@ class Scene:
 
         ### YOUR CODE HERE ###
         # HINT: Refer to README for a relevant equation
+        colours = colours.half()
+        alphas = alphas.half()
+        transmittance = transmittance.half()
+        z_vals = z_vals.half()
         image = torch.sum(colours * alphas * transmittance, dim=0)  # (H, W, 3)
 
         ### YOUR CODE HERE ###
@@ -692,9 +707,9 @@ class Scene:
         # colours instead of using self.gaussians.colours[idxs]. You may also comment
         # out the above line of code since it will be overwritten anyway.
 
-        #spherical_harmonics = self.gaussians.spherical_harmonics[idxs]
-        #gaussian_dirs = self.calculate_gaussian_directions(means_3D, camera)
-        #colours = colours_from_spherical_harmonics(spherical_harmonics, gaussian_dirs)
+        spherical_harmonics = self.gaussians.spherical_harmonics[idxs]
+        gaussian_dirs = self.calculate_gaussian_directions(means_3D, camera)
+        colours = colours_from_spherical_harmonics(spherical_harmonics, gaussian_dirs)
 
         # Apply activations
         quats, scales, opacities = self.gaussians.apply_activations(

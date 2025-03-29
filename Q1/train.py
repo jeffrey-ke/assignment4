@@ -1,4 +1,6 @@
 import os
+from jutils.logger import *
+from jutils.utils import pdb
 import torch
 import imageio
 import argparse
@@ -37,7 +39,6 @@ def setup_optimizer(gaussians):
         {'params': [gaussians.means], 'lr': 0.0001, "name": "means"},
     ]
     optimizer = torch.optim.Adam(parameters, lr=0.0, eps=1e-15)
-    optimizer = None
 
     return optimizer
 
@@ -107,13 +108,13 @@ def run_training(args):
         # HINT: Get img_size from train_dataset
         # HINT: Get per_splat from args.gaussians_per_splat
         # HINT: camera is available above
-        pred_img = scene.render(camera, args.gaussians_per_splat, train_dataset.img_size, (1.,) * 3)
+        pred_img, *_ = scene.render(camera, args.gaussians_per_splat, train_dataset.img_size, (1.,) * 3)
 
         # Compute loss
         ### YOUR CODE HERE ###
         # HINT: A simple standard loss function should work.
         loss = torch.nn.L1Loss()(pred_img, gt_img)
-
+        get_writer("try1").add_scalar("Loss", loss.detach().cpu().item(), get_step("loss"))
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
@@ -154,7 +155,7 @@ def run_training(args):
             # HINT: Get img_size from train_dataset
             # HINT: Get per_splat from args.gaussians_per_splat
             # HINT: camera is available above
-            pred_img = None
+            pred_img, *_ = scene.render(camera, args.gaussians_per_splat, train_dataset.img_size, (1.,) * 3)
 
         pred_npy = pred_img.detach().cpu().numpy()
         pred_npy = (np.clip(pred_npy, 0.0, 1.0) * 255.0).astype(np.uint8)
@@ -182,7 +183,7 @@ def run_training(args):
             # HINT: Get img_size from test_dataset
             # HINT: Get per_splat from args.gaussians_per_splat
             # HINT: camera is available above
-            pred_img = None
+            pred_img, *_ = scene.render(camera, args.gaussians_per_splat, train_dataset.img_size, (1.,) * 3)
 
             gt_npy = gt_img.detach().cpu().numpy()
             pred_npy = pred_img.detach().cpu().numpy()

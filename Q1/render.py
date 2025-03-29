@@ -19,7 +19,7 @@ def create_renders(args):
     azims = np.linspace(-180, 180, num_views)
     elevs = np.linspace(-180, 180, num_views)
 
-    debug_root = os.path.join(args.out_path, "q1_render")
+    debug_root = os.path.join(args.out_path, f"q1_render{args.tag}")
     if not os.path.exists(debug_root):
         os.makedirs(debug_root, exist_ok=True)
 
@@ -74,7 +74,7 @@ def create_renders(args):
 
         imgs.append(np.array(resized))
 
-    gif_path = os.path.join(args.out_path, "q1_render.gif")
+    gif_path = os.path.join(args.out_path, f"q1_render{args.tag}.gif")
     imageio.mimwrite(gif_path, imgs, duration=1000.0*(1/10.0), loop=0)
 
 def get_args():
@@ -95,6 +95,7 @@ def get_args():
             "The rendered image will have img_dim as its height and width."
         )
     )
+    parser.add_argument("--tag", default="", type=str)
     parser.add_argument(
         "--gaussians_per_splat", default=2048, type=int,
         help=(

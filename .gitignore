@@ -1,0 +1,12 @@
+**/output**/**
+**__pycache__/**
+**.pyc
+**.pthdata
+nvdiffrast
+*.npy
+ref_output
+*raymarching*
+*nerf*
+*gridencoder*
+*freqencoder*
+*data*
